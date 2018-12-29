@@ -72,6 +72,41 @@ class CONE():
         omega_tidal = self.x_square(omega)
         return self.P_x(omega_tidal)
 
+    def W_square(self, z, s):
+        W_list = list()
+        for i in range(self.Cone_num):
+            if self.Cone_Dim[i] == 1:
+                W_list.append(np.diag([s[i][0][0] / z[i][0][0]]))
+            else:
+                z_i = z[i]
+                s_i = s[i]
+                length_zi = (np.dot(np.dot(z_i.transpose(), self.j_array[i]), z_i)) ** (1 / 2)
+                length_si = (np.dot(np.dot(s_i.transpose(), self.j_array[i]), s_i)) ** (1 / 2)
+                zi_bar = z_i / length_zi
+                si_bar = s_i / length_si
+
+                gamma = ((1 + np.dot(zi_bar.transpose(), si_bar)[0]) / 2) ** (1 / 2)
+                w_bar = (si_bar + np.dot(self.j_array[i], zi_bar)) / (2 * gamma)
+                eta_square = length_si / length_zi
+
+                w1_length = (np.linalg.norm(w_bar[1:])) ** 2
+
+                c = 1 + w_bar[0][0] + w1_length / (1 + w_bar[0][0])
+                d = 1 + 2 / (1 + w_bar[0][0]) + w1_length / (1 + w_bar[0][0]) ** 2
+
+                a = ((w_bar[0][0]) ** 2 + w1_length - (c ** 2 * w1_length) / (1 + d * w1_length)) / 2
+                u_0 = ((w_bar[0][0]) ** 2 + w1_length - a) ** (1 / 2)
+                u_1 = c / u_0
+                v_1 = (c ** 2 / u_0 ** 2 - d) ** (1 / 2)
+
+                D = np.diag([a] + [1] * (self.Cone_Dim[i] - 1))
+                u = np.vstack([np.diag([u_0]), u_1 * w_bar[1:]])
+                v = np.vstack([np.zeros([1, 1]), v_1 * w_bar[1:]])
+
+                V = eta_square * (D + np.dot(u, u.transpose()) - np.dot(v, v.transpose()))
+                W_list.append(V)
+        return W_list
+
     def Vector_Product(self, x, y):
         L_x = list()
         for i in range(self.Cone_num):
@@ -165,15 +200,31 @@ class CONE():
             if length < 0:
                 return 0
         return 1
+
+    def divide(self, u, w):
+        divide_value = list()
+        for i in range(self.Cone_num):
+            if self.Cone_Dim[i] >= 2:
+                Q = np.dot(u[i].transpose(), np.dot(self.j_array[i], u[i]))[0][0]
+                v = np.dot(u[i][1:].transpose(), w[i][1:])[0][0]
+                first = np.diag([u[i][0][0] * w[i][0][0] - v])
+                second = (v / u[i][0][0] - w[i][0][0]) * u[i][1:] + Q / u[i][0][0] * w[i][1:]
+                divide_value.append(np.vstack([first, second]) / Q)
+            else:
+                divide_value.append(np.diag([w[i][0][0] / u[i][0][0]]))
+        return divide_value
+
+
 # cone = CONE([3, 2, 1])
-# cone_0 = np.random.rand(3, 3)
-# cone_1 = np.random.rand(2, 2)
-# cone_2 = np.random.rand(1, 1)
-# s = [cone_0, cone_1, cone_2]
-# print(cone.x_square(s))
-#
 # cone_0 = np.array([100, 0, 0]).reshape([3, 1])
+# cone_1 = np.array([2.0, 1.0]).reshape([2, 1])
+# cone_2 = np.array([1]).reshape([1, 1])
+# s = [cone_0, cone_1, cone_2]
+#
+# cone_0 = np.array([30, 0, 0]).reshape([3, 1])
 # cone_1 = np.array([5.0, 2.0]).reshape([2, 1])
-# cone_2 = np.array([0]).reshape([1, 1])
+# cone_2 = np.array([3]).reshape([1, 1])
 # z = [cone_0, cone_1, cone_2]
-# print(cone.x_square(z))
+# W = cone.W(z, s)
+# print(np.dot(cone.pinjie(W), cone.pinjie(W)))
+# print(cone.W_square(z, s))

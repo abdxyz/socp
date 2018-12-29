@@ -2,7 +2,9 @@ import numpy as np
 from pwork import PWORK
 from scipy.sparse import csc_matrix
 
-"""
+import datetime
+
+'''
 c = np.array(
     [0.0, 0.0, 0.0, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
      1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
@@ -422,8 +424,9 @@ Gpr = np.array(
      -1.000000000000000000e+000, -1.000000000000000000e+000, -1.000000000000000000e+000, -1.000000000000000000e+000,
      -1.000000000000000000e+000, -1.000000000000000000e+000, -1.000000000000000000e+000, -1.000000000000000000e+000])
 G = csc_matrix((Gpr, Gir, Gjc)).toarray()
-"""
+'''
 
+'''
 
 c = np.array(
     [-0.335677,
@@ -1508,8 +1511,8 @@ Gpr = np.array(
      0.625723,
      -1.611942])
 G = csc_matrix((Gpr, Gir, Gjc)).toarray()
+'''
 
-"""
 c = np.array([33, 88, 89, 78, 58]).reshape([5, 1])
 G = np.array([[5, 6, 1, 0, 3],
               [2, 9, 2, 9, 8],
@@ -1525,6 +1528,80 @@ h = np.array([121, 146, 164, 84, 64, 108, 127, 93, 155, 141]).reshape([10, 1])
 Cone_Dim = np.array([3, 3, 4])
 A = np.zeros(shape=[0, 5])
 b = np.zeros(shape=[0, 1])
-"""
+
+
+
+def readdata(filename):
+    with open(filename, 'r', encoding='utf-8') as file:
+        data = file.readlines()
+    returndata = [float(x) for x in data]
+    return returndata
+
+
+Ajc = np.array(readdata('data/A_col'))
+Air = np.array(readdata('data/A_row'))
+Apr = np.array(readdata('data/A_val'))
+A = csc_matrix((Apr, Air, Ajc)).toarray()
+
+Gjc = np.array(readdata('data/G_col'))
+Gir = np.array(readdata('data/G_row'))
+Gpr = np.array(readdata('data/G_val'))
+G = csc_matrix((Gpr, Gir, Gjc)).toarray()
+
+h = np.array(readdata('data/h')).reshape([-1, 1])
+b = np.array(readdata('data/b')).reshape([-1, 1])
+c = np.array(readdata('data/c')).reshape([-1, 1])
+
+one_cone = [1] * 148
+second_cone = [int(x) for x in readdata('data/q')]
+Cone_Dim = one_cone + second_cone
+
+'''
+c = np.array(
+    [-1]).reshape([-1, 1])
+b = np.zeros(shape=[0, 1])
+h = np.array(
+    [-2.000000000000000000e+00, 1.000000000000000000e+00]).reshape([-1, 1])
+Cone_Dim = np.array([1] * 2)
+
+A = np.zeros([0, 1])
+Gjc = np.array(
+    [0, 2])
+Gir = np.array(
+    [0, 1])
+Gpr = np.array(
+    [-1, 1])
+G = csc_matrix((Gpr, Gir, Gjc)).toarray()
+'''
+'''
+c = np.array(
+    [-1.0, 0.0, 0.0]).reshape([-1, 1])
+b = np.array(
+    [3.0, 0.0]).reshape([-1, 1])
+h = np.array(
+    [25.0, 0.0, 0.0]).reshape([-1, 1])
+Cone_Dim = np.array([1] * 3)
+
+Ajc = np.array(
+    [0, 2, 3, 4])
+Air = np.array(
+    [0, 1, 1, 1])
+Apr = np.array(
+    [1.0, -1.0, 1.0, 1.0])
+A = csc_matrix((Apr, Air, Ajc)).toarray()
+
+Gjc = np.array(
+    [0, 0, 2, 4])
+Gir = np.array(
+    [0, 1, 0, 2])
+Gpr = np.array(
+    [8.0, 1.0, 9.0, -1.0])
+G = csc_matrix((Gpr, Gir, Gjc)).toarray()
+'''
+start = datetime.datetime.now()
+
 pwork = PWORK(c, A, b, G, h, Cone_Dim)
 pwork.solve()
+end = datetime.datetime.now()
+print((end - start).microseconds)
+print((end-start))
