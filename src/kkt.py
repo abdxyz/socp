@@ -2,7 +2,7 @@ import numpy as np
 
 
 class KKT():
-    def __init__(self, c, A, b, G, h, p, m, n):
+    def __init__(self, c, A, b, G, h, p, m, n, fengge_bar):
         self.c = c.copy()
         self.A = A.copy()
         self.b = b.copy()
@@ -10,6 +10,7 @@ class KKT():
         self.h = h.copy()
 
         self.cbh = np.vstack([-1 * self.c, self.b, self.h])
+        self.fengge_bar = fengge_bar.copy()
 
         self.p = p
         self.m = m
@@ -56,21 +57,26 @@ class KKT():
         hang_2 = np.concatenate((self.G, self.zero_mp, self.zero_mm), axis=1)
         return np.concatenate((hang_0, hang_1, hang_2), axis=0)
 
-    def solve(self, direction_type, W, bx, by, bz, lambda_bs, b_tau, b_kappa, kappa, tau):
-        minus_w2 = -1 * np.dot(W, W)
+    def solve(self, direction_type, W, W_2, bx, by, bz, lambda_bs, b_tau, b_kappa, kappa, tau):
+        minus_w2 = -1 * W_2
         b_xyz = np.vstack([bx, by, bz])
+        # print(b_xyz)
         if direction_type == 0:
             self.Direction_Matrix[self.fenge[1]:self.fenge[2], self.fenge[1]:self.fenge[2]] = minus_w2
             self.delta_x1, self.delta_y1, self.delta_z1 = np.vsplit(np.linalg.solve(self.Direction_Matrix, self.cbh),
                                                                     self.fenge[0:2])
+            self.delta_z1 = self.sub_two(self.delta_z1)
+
         delta_x2, delta_y2, delta_z2 = np.vsplit(np.linalg.solve(self.Direction_Matrix, b_xyz),
                                                  self.fenge[0:2])
+        delta_z2 = self.sub_two(delta_z2)
+        h = self.sub_two(self.h)
 
         delta_tau = (b_tau - b_kappa / tau + np.dot(self.c.transpose(), delta_x2)[0] + np.dot(self.b.transpose(),
                                                                                               delta_y2)[0] + np.dot(
-            self.h.transpose(), delta_z2)) / (kappa / tau - np.dot(self.c.transpose(), self.delta_x1)[0] -
-                                              np.dot(self.b.transpose(), self.delta_y1)[0] -
-                                              np.dot(self.h.transpose(), self.delta_z1)[0])
+            h.transpose(), delta_z2)) / (kappa / tau - np.dot(self.c.transpose(), self.delta_x1)[0] -
+                                         np.dot(self.b.transpose(), self.delta_y1)[0] -
+                                         np.dot(h.transpose(), self.delta_z1)[0])
         delta_x = delta_x2 + delta_tau * self.delta_x1
         delta_y = delta_y2 + delta_tau * self.delta_y1
         delta_z = delta_z2 + delta_tau * self.delta_z1
@@ -79,8 +85,11 @@ class KKT():
         return delta_x, delta_y, delta_z, delta_tau, delta_s, delta_kappa
 
     def residual_update(self, x, y, s, z, k, t):
-        sk = np.concatenate([self.zero_n1, self.zero_p1, np.vstack(s), [[k]]])
-        xyzt = np.concatenate([x, y, np.vstack(z), [[t]]])
+        sk = np.concatenate([self.zero_n1, self.zero_p1, s, [[k]]])
+        xyzt = np.concatenate([x, y, z, [[t]]])
 
         residual_vec = sk - np.dot(self.Residual_Matrix, xyzt)
         return np.vsplit(residual_vec, self.fenge[0:3])
+
+    def sub_two(self, s):
+        return np.vstack(i[:3 * (i.shape[0] <= 1) - 2] for i in np.vsplit(s, self.fengge_bar))

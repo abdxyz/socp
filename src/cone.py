@@ -74,14 +74,17 @@ class CONE():
 
     def W_square(self, z, s):
         W_list = list()
+        W_square_list = list()
+
         for i in range(self.Cone_num):
             if self.Cone_Dim[i] == 1:
-                W_list.append(np.diag([s[i][0][0] / z[i][0][0]]))
+                W_list.append(np.diag([(s[i][0][0] / z[i][0][0]) ** (1 / 2)]))
+                W_square_list.append(np.diag([s[i][0][0] / z[i][0][0]]))
             else:
                 z_i = z[i]
                 s_i = s[i]
-                length_zi = (np.dot(np.dot(z_i.transpose(), self.j_array[i]), z_i)) ** (1 / 2)
-                length_si = (np.dot(np.dot(s_i.transpose(), self.j_array[i]), s_i)) ** (1 / 2)
+                length_zi = (np.dot(np.dot(z_i.transpose(), self.j_array[i]), z_i))[0][0] ** (1 / 2)
+                length_si = (np.dot(np.dot(s_i.transpose(), self.j_array[i]), s_i))[0][0] ** (1 / 2)
                 zi_bar = z_i / length_zi
                 si_bar = s_i / length_si
 
@@ -102,10 +105,25 @@ class CONE():
                 D = np.diag([a] + [1] * (self.Cone_Dim[i] - 1))
                 u = np.vstack([np.diag([u_0]), u_1 * w_bar[1:]])
                 v = np.vstack([np.zeros([1, 1]), v_1 * w_bar[1:]])
+                u_t = u.transpose()
+                v_t = v.transpose()
 
-                V = eta_square * (D + np.dot(u, u.transpose()) - np.dot(v, v.transpose()))
-                W_list.append(V)
-        return W_list
+                zero = np.zeros([1, 1])
+                one = np.diag([1])
+                minusone = np.diag([-1])
+
+                # V = eta_square * (D + np.dot(u, u.transpose()) - np.dot(v, v.transpose()))
+                V = eta_square * np.bmat('D,v,u;v_t,one,zero;u_t,zero,minusone').data
+
+                w_bar_0 = np.diag([w_bar[0][0]])
+                w_bar_1 = w_bar[1:]
+                w_bar_1t = w_bar_1.transpose()
+                w_bar_11 = np.eye(self.Cone_Dim[i] - 1) + (1 + w_bar[0][0]) ** (-1) * np.dot(w_bar_1, w_bar_1t)
+                W = np.bmat('w_bar_0,w_bar_1t;w_bar_1,w_bar_11').data
+
+                W_list.append(eta_square ** (1 / 2) * W)
+                W_square_list.append(V)
+        return W_list, W_square_list
 
     def Vector_Product(self, x, y):
         L_x = list()
@@ -179,12 +197,13 @@ class CONE():
             x.append(t_i)
         return x
 
-    def pinjie(self, W):
-        x = np.zeros([self.Dim_Sum, self.Dim_Sum])
+    def pinjie(self, W, Cone_Dim):
+        Dim_Sum = sum(Cone_Dim)
+        x = np.zeros([Dim_Sum, Dim_Sum])
         begin = 0
-        for i in range(self.Cone_num):
-            x[begin:begin + self.Cone_Dim[i], begin:begin + self.Cone_Dim[i]] = W[i]
-            begin = begin + self.Cone_Dim[i]
+        for i in range(len(Cone_Dim)):
+            x[begin:begin + Cone_Dim[i], begin:begin + Cone_Dim[i]] = W[i]
+            begin = begin + Cone_Dim[i]
         return x
 
     def fenge(self, s):
@@ -226,5 +245,33 @@ class CONE():
 # cone_2 = np.array([3]).reshape([1, 1])
 # z = [cone_0, cone_1, cone_2]
 # W = cone.W(z, s)
-# print(np.dot(cone.pinjie(W), cone.pinjie(W)))
-# print(cone.W_square(z, s))
+# W1, W2 = cone.W_square(z, s)
+# print(cone.dot(W1, W1))
+# print(W1)
+# print(W)
+# z = [np.array([[1.01009233],
+#                [-0.09704341],
+#                [0.05120519]]),
+#      np.array([[0.45641304],
+#                [0.26280923],
+#                [0.00406377]]),
+#      np.array([[0.98809928],
+#                [-0.00306693],
+#                [0.12062525],
+#                [0.43830367]])]
+#
+# s = [np.array([[0.13495501],
+#                [0.06879675],
+#                [-0.10431089]]),
+#      np.array([[0.66828074],
+#                [-0.37558638],
+#                [-0.00545829]]),
+#      np.array([[0.2519366],
+#                [0.01434025],
+#                [-0.04647276],
+#                [-0.16625544]])]
+# cone = CONE([3, 3, 4])
+# W = cone.W(z, s)
+# W1, W2 = cone.W_square(z, s)
+# W2 = cone.dot(W1, W1)
+# print(cone.dot(W2, z))

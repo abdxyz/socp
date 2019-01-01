@@ -21,7 +21,7 @@ class PWORK():
         self.G_bar, self.h_bar = self.Gh_fengge()
         self.fengge_bar = np.add.accumulate(self.Cone_Dim_bar)
 
-        self.kkt = KKT(c, A, b, self.G_bar, self.h_bar, self.p, self.h_bar.shape[0], self.n, self.fengge_bar)
+        self.kkt = KKT(c, A, b, self.G, self.h, self.p, self.m, self.n, self.fengge_bar)
         self.cone = CONE(Cone_Dim)
 
         self.kappa = 1
@@ -36,16 +36,15 @@ class PWORK():
         self.z = self.cone.init_value
 
     def solve(self):
-        for i in range(20):
-            s_value = np.vstack(self.add_two(self.s))
-            z_value = np.vstack(self.add_two(self.z))
+        for i in range(12):
+            s_value = np.vstack(self.s)
+            z_value = np.vstack(self.z)
 
             # 第一步，compute residuals and evaluate stopping criteria
             r_x, r_y, r_z, r_tau = self.kkt.residual_update(self.x, self.y, s_value, z_value, self.kappa, self.tau)
             # 检查退出条件
-            # print(r_x, r_y, r_z, r_tau)
-            # input()
 
+            print(r_x, r_y, r_z, r_tau)
             # 第二步，compute scaling matrix W
             W, W_2 = self.cone.W_square(self.z, self.s)
             W_inv = self.cone.inv_t(W)
@@ -55,9 +54,6 @@ class PWORK():
             lambda_v = self.cone.dot(W, self.z)
             miu = (self.cone.sT_z(self.s, self.z) + self.kappa * self.tau) / (self.cone.Cone_num + 1)
 
-            # print('step 2')
-            # print(W, self.z, lambda_v)
-            # input()
             # 第三步，compute affine scaling direction
             dx = -1 * r_x
             dy = -1 * r_y
@@ -70,20 +66,15 @@ class PWORK():
 
             bx = -1 * dx
             by = dy
-            bz = dz - np.vstack(self.add_two(
-                self.cone.fenge(np.dot(W_matrix, np.vstack(self.cone.divide(lambda_v, self.cone.fenge(ds)))))))
+            # bz = dz - np.dot(W_matrix, np.vstack(self.cone.divide(lambda_v, self.cone.fenge(ds))))
+            bz = dz - s_value
             b_tau = -1 * d_tau
             bs = -1 * ds
             lambda_bs = np.vstack(self.cone.divide(lambda_v, self.cone.fenge(bs)))
 
-            # print(bx, by, bz)
-            # input()
             b_kappa = -1 * d_kappa
             x_direction_affline, y_direction_affline, z_direction_affline, tau_direction_affline, s_direction_affline, kappa_direction_affline = self.kkt.solve(
                 0, W_matrix, W_2_matrix, bx, by, bz, lambda_bs, b_tau, b_kappa, self.kappa, self.tau)
-            # print(x_direction_affline, y_direction_affline, z_direction_affline, tau_direction_affline,
-            #     s_direction_affline, kappa_direction_affline)
-            # input()
 
             z_direction_affline_cone = self.cone.fenge(z_direction_affline)
             s_direction_affline_cone = self.cone.fenge(s_direction_affline)
@@ -126,8 +117,6 @@ class PWORK():
 
             x_direction, y_direction, z_direction, tau_direction, s_direction, kappa_direction = self.kkt.solve(
                 1, W_matrix, W_2_matrix, bx, by, bz, lambda_bs, b_tau, b_kappa, self.kappa, self.tau)
-            # print(x_direction, y_direction, z_direction, tau_direction, s_direction, kappa_direction)
-            # input()
             z_direction_cone = self.cone.fenge(z_direction)
             s_direction_cone = self.cone.fenge(s_direction)
             tau_direction = tau_direction[0][0]
@@ -136,8 +125,7 @@ class PWORK():
             # 第六步 update iterates
             distance_z = self.cone.Distance_to_boundary(self.z, z_direction_cone)
             distance_s = self.cone.Distance_to_boundary(self.s, s_direction_cone)
-            # print(distance_z,distance_s)
-            # input()
+
             if tau_direction >= 0:
                 distance_t = float('inf')
             else:
@@ -148,16 +136,14 @@ class PWORK():
             else:
                 distance_k = -1 * self.kappa / kappa_direction
             alpha = 0.99 * min([min([distance_z, distance_s, distance_t, distance_k]), 1])
-            # print(alpha)
-            # input()
+
             self.x = self.x + alpha * x_direction
             self.y = self.y + alpha * y_direction
             self.z = self.cone.fenge(np.vstack(self.z) + alpha * z_direction)
             self.tau = self.tau + alpha * tau_direction
             self.s = self.cone.fenge(np.vstack(self.s) + alpha * s_direction)
             self.kappa = self.kappa + alpha * kappa_direction
-            # print(self.s)
-            # input()
+
             print(i, np.dot(self.c.transpose(), self.x)[0][0] / self.tau, self.kappa, self.tau)
 
     def Gh_fengge(self):

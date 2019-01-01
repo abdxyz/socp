@@ -426,7 +426,7 @@ Gpr = np.array(
 G = csc_matrix((Gpr, Gir, Gjc)).toarray()
 '''
 
-'''
+
 
 c = np.array(
     [-0.335677,
@@ -1511,8 +1511,8 @@ Gpr = np.array(
      0.625723,
      -1.611942])
 G = csc_matrix((Gpr, Gir, Gjc)).toarray()
-'''
 
+'''
 c = np.array([33, 88, 89, 78, 58]).reshape([5, 1])
 G = np.array([[5, 6, 1, 0, 3],
               [2, 9, 2, 9, 8],
@@ -1528,8 +1528,8 @@ h = np.array([121, 146, 164, 84, 64, 108, 127, 93, 155, 141]).reshape([10, 1])
 Cone_Dim = np.array([3, 3, 4])
 A = np.zeros(shape=[0, 5])
 b = np.zeros(shape=[0, 1])
-
-
+'''
+'''
 
 def readdata(filename):
     with open(filename, 'r', encoding='utf-8') as file:
@@ -1555,6 +1555,7 @@ c = np.array(readdata('data/c')).reshape([-1, 1])
 one_cone = [1] * 148
 second_cone = [int(x) for x in readdata('data/q')]
 Cone_Dim = one_cone + second_cone
+'''
 
 '''
 c = np.array(
@@ -1604,4 +1605,4 @@ pwork = PWORK(c, A, b, G, h, Cone_Dim)
 pwork.solve()
 end = datetime.datetime.now()
 print((end - start).microseconds)
-print((end-start))
+print((end - start))
